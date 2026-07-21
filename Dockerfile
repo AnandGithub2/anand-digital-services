@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     nodejs \
     npm \
-    && docker-php-ext-install pdo pdo_mysql
+    && docker-php-ext-install pdo pdo_sqlite pdo_mysql
 
 COPY . .
 
@@ -20,11 +20,18 @@ RUN composer install --no-dev --optimize-autoloader
 RUN npm install
 RUN npm run build
 
-RUN chmod -R 775 storage bootstrap/cache
+# IMPORTANT: Create SQLite database file
+RUN mkdir -p database
+RUN touch database/database.sqlite
+
+# Laravel cache clear
+RUN php artisan config:clear
+RUN php artisan cache:clear
+RUN php artisan route:clear
+RUN php artisan view:clear
+
+RUN php artisan optimize
 
 EXPOSE 10000
 
-CMD php artisan config:clear && \
-    php artisan route:clear && \
-    php artisan view:clear && \
-    php artisan serve --host=0.0.0.0 --port=10000
+CMD php artisan serve --host=0.0.0.0 --port=10000
